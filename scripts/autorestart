@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Restart the Durafront server whenever any file in Durafront,
+# DuraLex, or SedLex is changed, useful during development
+#
+# requires inotifywait (provided by inotify-tools in Debian/Ubuntu)
+# mainly inspired from https://stackoverflow.com/a/34672970
+
+cd "$(dirname "$0")/.."
+
+sigint_handler()
+{
+  kill $PID
+  exit
+}
+
+trap sigint_handler INT TERM
+
+while true; do
+  python3 server.py &
+  PID=$!
+  inotifywait -e close_write -r `pwd` >/dev/null 2>/dev/null
+  kill $PID
+done
