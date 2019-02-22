@@ -17,6 +17,7 @@ sigint_handler()
 trap sigint_handler INT TERM
 
 while true; do
+  while [ ! -f server.py ]; do sleep 0; done
   python3 server.py &
   PID=$!
   inotifywait -e close_write -r `pwd` >/dev/null 2>/dev/null

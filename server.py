@@ -2,11 +2,13 @@
 
 import http.server
 import subprocess
+import functools
 import time
 import sys
 import os
 import re
 
+import diff_match_patch
 import metslesliens
 
 basename = '/mnt/TEST/legi/codes'
@@ -42,9 +44,12 @@ mois2 = {
     '12': 'décembre',
 }
 
-def metsenformelarticle(x, url1=None, url2=None):
+def metsenformelarticle(x, mode='all', url1=None, url2=None):
 
-    texte = x.group(2)
+    if mode == 'all':
+        texte = x.group(2)
+    elif mode == 'article':
+        texte = x
 
     #return '<div id="article_' + x.group(1) + '" class="article"><h3>Article ' + x.group(1) + '</h3>\n' + balance_html(texte) + '</div>\n\n'
 
@@ -59,7 +64,7 @@ def metsenformelarticle(x, url1=None, url2=None):
                 if isinstance(noms_article, str):
                     noms_article = [noms_article]
                 for nom_article in noms_article:
-                    if nom_article == 'présent':
+                    if nom_article in ['présent', 'précédent', 'suivant']:
                         continue
                     m = texte_lie.find(nom_article)
                     span = (m, m+len(nom_article))
@@ -80,14 +85,34 @@ def metsenformelarticle(x, url1=None, url2=None):
                     m = texte_lie.find(nom_article)
                     span = (m, m+len(nom_article))
                     destination_article = re.sub('^([LDRA])\.? ?', r'\1', re.sub('^L\.?O\.? ', 'LO', nom_article))
-                    href = url2.replace('\\1', 'article_' + destination_article).replace('\\2', 'code').replace('\\3', lien['texte']['nom'].replace(' ', '_'))
+                    href = url2.replace('\\2', 'code').replace('\\3', lien['texte']['nom'].replace(' ', '_'))
+                    href = href.replace('\\1', 'article_' + destination_article) if url1 else href.replace('\\1', 'texte') + '#' + 'article_' + destination_article
                     texte_lie = texte_lie[:span[0]] + '<a href="' + href + '">' + texte_lie[span[0]:span[1]] + '</a>' + texte_lie[span[1]:]
             texte = texte[:index[0]+translation] + texte_lie + texte[index[1]+translation:]
             translation += len(texte_lie) - index[1] + index[0]
 
-    return '<div id="article_' + x.group(1) + '" class="article"><h3>Article ' + x.group(1) + '</h3>\n' + balance_html(texte) + '</div>\n\n'
+    if mode == 'all':
+        return '<div id="article_' + x.group(1) + '" class="article"><h3>Article ' + x.group(1) + '</h3>\n' + balance_html(texte) + '</div>\n\n'
+    elif mode == 'article':
+        return balance_html(texte)
 
-def markdown2html(text, url1=None, url2=None):
+def repl_p(x):
+
+    text = '<p><span>' + x.group(1) + '</span></p>\n'
+
+    text = text.replace('<ins>', '</span><ins>')
+    text = text.replace('<del>', '</span><del>')
+    text = text.replace('</ins>', '</ins><span>')
+    text = text.replace('</del>', '</del><span>')
+
+    return text
+
+def repl_insdel(x, tag):
+
+    return re.sub('</span></p>\n*<p><span>', '</' + tag + '></p>\n<p><' + tag + '>', x.group())
+
+
+def markdown2html(text, mode='all', url1=None, url2=None):
 
     html = '\n' + text + '\n'
 
@@ -109,17 +134,32 @@ def markdown2html(text, url1=None, url2=None):
     # Cleaning
     html = re.sub(r'<div[^/>]*/>', '', html)
 
-    # Transform headers (titles and articles)
-    html = re.sub(r'(?<=\n)(?:#+) Article ([^\n]+)\n((?:(?!#)[^\n]*\n*)*)', lambda x : metsenformelarticle(x, url1, url2), html)
+    # Transform articles
+    if mode == 'all':
+        html = re.sub(r'(?<=\n)(?:#+) Article ([^\n]+)\n((?:(?!#)[^\n]*\n*)*)', lambda x : metsenformelarticle(x, 'all', url1, url2), html)
+    elif mode == 'article':
+        html = metsenformelarticle(html, 'article', url1, url2)
+
+    # Transform headers
     html = re.sub(r'(?<=\n)(#+) ([^\n]+)', lambda x: '<h2 class="h'+str(len(x.group(1)))+' hmod3r'+str((len(x.group(1))-1)%3)+'" id="'+re.sub('[  ]','_',x.group(2).replace('’', "'"))+'">'+x.group(2)+'</h2>', html)
 
     html = re.sub(r'(?<=\n)((?:- [^\n]+\n)+)', r'<ul>\n\1</ul>\n\n', html)
     html = re.sub(r'(?<=\n)- ([^\n]+)\n', r'<li>\1</li>\n', html)
 
-    html = re.sub(r'(?<=\n\n)([^\n<][^\n]*)(?=\n\n)', r'<p>\1</p>', html)
+    html = re.sub(r'(?<=\n\n)([^\n][^\n]*)(?=\n\n)', repl_p, '\n\n' + html+'\n\n').strip()
+    html = '<p><span>' + html + '</span></p>'
+    html = html.replace('<span></span>', '')
+    html = html.replace('<del></del>', '')
+    html = html.replace('<ins></ins>', '')
+
+    html = re.sub(r'<ins>((?!</ins>)<?[^<]*)*', lambda x: repl_insdel(x, 'ins'), html, flags=re.S)
+    html = re.sub(r'<del>((?!</del>)<?[^<]*)*', lambda x: repl_insdel(x, 'del'), html, flags=re.S)
+
+    html = re.sub(r'<p><del>((?:(?!/del>)(?!/ins>)[^<]*<)*)/del></p>', r'<p class="delete">\1/p>', html)
+    html = re.sub(r'<p><ins>((?:(?!/ins>)(?!/del>)[^<]*<)*)/ins></p>', r'<p class="insert">\1/p>', html)
 
     # Cleaning
-    html = re.sub(r'</p>\n+<p>', r'</p>\n<p>', html)
+    html = re.sub(r'</p>\n+<p(?=[> ])', r'</p>\n<p', html)
     html = re.sub(r'\n{3,}', r'\n\n', html)
 
     html = html.strip()
@@ -168,6 +208,23 @@ Cette page est une maquette d’une partie tronquée du code de commerce, le but
 """
 
 
+def get_commit(h):
+
+    global basename
+
+    commit_object = str(subprocess.check_output(['git', 'cat-file', '-p', h], cwd=basename), 'utf-8')
+    tree_sha1 = re.search(r'^tree ([0-9a-f]+)$', commit_object, re.M)
+    message_commit = re.search('\n\n(.*)$', commit_object, re.M)
+    date_consolidation = message_commit.group().strip()
+    if date_consolidation == 'Version consolidée au 22 février 2222':
+        date_consolidation = 'Version consolidée à une date future indéterminée'
+    tree_object = str(subprocess.check_output(['git', 'cat-file', '-p', tree_sha1.group(1)], cwd=basename), 'utf-8')
+    blob_sha1 = re.search('^100644 blob ([0-9a-f]+)\t[^\n]+$', tree_object, re.M)
+    texte = str(subprocess.check_output(['git', 'cat-file', '-p', blob_sha1.group(1)], cwd=basename), 'utf-8')
+
+    return texte, date_consolidation
+
+
 def get_history(ref):
 
     global basename, cache
@@ -193,6 +250,127 @@ def get_history(ref):
                 cache['history_' + ref + '/texte-futur'].append((x.group(4) + mois[x.group(3)] + ('0' if len(x.group(2)) == 1 else '') + x.group(2), x.group(1)))
 
     return (cache['history_' + ref + '/texte'], cache['history_' + ref + '/texte-futur'])
+
+
+def cmp_articles(a, b):
+
+    if a == b:
+        return 0
+    elif a[0] in ['equal', 'replace', 'delete'] and b[0] in ['equal', 'replace', 'delete']:
+        return -1 if a[1] < b[1] else 1
+    elif a[0] in ['equal', 'replace', 'insert'] and b[0] in ['equal', 'replace', 'insert']:
+        return -1 if a[2] < b[2] else 1
+    else:
+        return -1 if a[0] == 'delete' and b[0] == 'insert' else 1
+
+
+def diff_articles(text_a, text_b):
+
+    articles_a = {x.start(): x.group(1) for x in re.finditer(r'^#+ Article ([^\n]+\n(?:(?!#)[^\n]*\n*)*)', text_a, re.M)}
+    articles_b = {x.start(): x.group(1) for x in re.finditer(r'^#+ Article ([^\n]+\n(?:(?!#)[^\n]*\n*)*)', text_b, re.M)}
+
+    articles_a_inv = {articles_a[x]: x for x in articles_a}
+    articles_b_set = set(articles_b.values())
+
+    articles = {}
+    for offset in articles_a:
+        if articles_a[offset] in articles_b_set:
+            continue
+        title = re.match('[^\n]+', articles_a[offset]).group()
+        articles[title] = ('delete', offset, None, 'Article ' + articles_a[offset], '')
+
+    for offset in articles_b:
+        if articles_b[offset] in articles_a_inv:
+            title = re.match('[^\n]+', articles_b[offset]).group()
+            articles[title] = ('equal', articles_a_inv[articles_b[offset]], offset, 'Article ' + articles_b[offset], 'Article ' + articles_b[offset])
+        else:
+            title = re.match('[^\n]+', articles_b[offset]).group()
+            if title in articles:
+                articles[title] = ('replace', articles[title][1], offset, articles[title][3], 'Article ' + articles_b[offset])
+            else:
+                articles[title] = ('insert', None, offset, '', 'Article ' + articles_b[offset])
+
+    articles = sorted(articles.values(), key=functools.cmp_to_key(cmp_articles))
+
+    return articles
+
+def html_diff(articles, url1=None, url2=None):
+
+    dmp = diff_match_patch.diff_match_patch()
+    html = '<div class="diff">'
+    for article in articles:
+
+        if article[0] == 'delete':
+
+            title = re.match('Article [^\n]*', article[3]).group()
+            html += '<div class="article delete"><h3>' + title + '</h3>' + markdown2html(article[3][len(title):].strip(), 'article', url1, url2) + '</div>'
+
+        elif article[0] == 'replace':
+
+            title = re.match('Article [^\n]*', article[3]).group()
+            diff = dmp.diff_main(article[3][len(title):].strip(), article[4][len(title):].strip())
+            dmp.diff_cleanupSemantic(diff)
+            j = 0
+            for i in range(0, len(diff)):
+                if i+j+1 < len(diff) and diff[i+j][0] == diff[i+j+1][0]:
+                    diff[i+j] = (diff[i+j][0], diff[i+j][1] + diff[i+j+1][1])
+                    del diff[i+j+1]
+                    j -= 1
+
+                if i+j+2 < len(diff) and diff[i+j][0] == 0 and diff[i+j+1][0] == -1 and diff[i+j+2][0] == 1 and len(diff[i+j][1]) and len(diff[i+j+2][1]) and len(diff[i+j+2][1]):
+                    if re.match('^[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']{2}$', diff[i+j][1][-1] + diff[i+j+1][1][0], re.I) and re.match('^[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']{2}$', diff[i+j][1][-1] + diff[i+j+2][1][0], re.I):
+                        common_word = re.search('[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']+$', diff[i+j][1], re.I)
+                        diff[i+j] = (0, diff[i+j][1][:-len(common_word.group())])
+                        diff[i+j+1] = (-1, common_word.group() + diff[i+j+1][1])
+                        diff[i+j+2] = (1, common_word.group() + diff[i+j+2][1])
+                    if not len(diff[i+j][1]):
+                        del diff[i+j]
+                        j -= 1
+                    elif len(diff[i+j][1]) < 3 and '\n' not in diff[i+j][1]:
+                        common_word = diff[i+j][1]
+                        diff[i+j+1] = (-1, common_word + diff[i+j+1][1])
+                        diff[i+j+2] = (1, common_word + diff[i+j+2][1])
+                        del diff[i+j]
+                        j -= 1
+
+                if i+j+2 < len(diff) and diff[i+j][0] == -1 and diff[i+j+1][0] == 1 and diff[i+j+2][0] == 0 and len(diff[i+j][1]) and len(diff[i+j+2][1]) and len(diff[i+j+2][1]):
+                    if re.match('^[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']{2}$', diff[i+j][1][-1] + diff[i+j+2][1][0], re.I) and re.match('^[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']{2}$', diff[i+j+1][1][-1] + diff[i+j+2][1][0], re.I):
+                        common_word = re.match('^[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9\']+', diff[i+j+2][1], re.I)
+                        diff[i+j] = (-1, diff[i+j][1] + common_word.group())
+                        diff[i+j+1] = (1, diff[i+j+1][1] + common_word.group())
+                        diff[i+j+2] = (0, diff[i+j+2][1][len(common_word.group()):])
+                    if not len(diff[i+j+2][1]):
+                        del diff[i+j+2]
+                        j -= 1
+                    elif len(diff[i+j+2][1]) < 3 and '\n' not in diff[i+j+2][1]:
+                        common_word = diff[i+j+2][1]
+                        diff[i+j] = (-1, diff[i+j][1] + common_word)
+                        diff[i+j+1] = (1, diff[i+j+1][1] + common_word)
+                        del diff[i+j+2]
+                        j -= 1
+            for i in range(0, len(diff)):
+                if i+2 < len(diff) and diff[i][0] != 0 and diff[i+1][0] != 0 and diff[i][0] == diff[i+2][0]:
+                    diff[i] = (diff[i][0], diff[i][1] + diff[i+2][1])
+                    del diff[i+2]
+            htmld = []
+            for (op, data) in diff:
+                text = (data.replace("&", "&amp;").replace("<", "&lt;")
+                           .replace(">", "&gt;"))
+                if op == dmp.DIFF_INSERT:
+                    htmld.append("<ins>%s</ins>" % text)
+                elif op == dmp.DIFF_DELETE:
+                    htmld.append("<del>%s</del>" % text)
+                elif op == dmp.DIFF_EQUAL:
+                    htmld.append(text)
+            html += '<div class="article replace"><h3>' + title + '</h3>' + markdown2html(''.join(htmld), 'article', url1, url2) + '</div>'
+
+        elif article[0] == 'insert':
+
+            title = re.match('Article [^\n]*', article[4]).group()
+            html += '<div class="article insert"><h3>' + title + '</h3>' + markdown2html(article[4][len(title):].strip(), 'article', url1, url2) + '</div>'
+
+    html += '</div>'
+    return html
 
 
 class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -251,16 +429,7 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     h = href.group(1) if href else hreff.group(1)
                     vigueur_future = False if href else True
                 if h:
-                    commit_object = str(subprocess.check_output(['git', 'cat-file', '-p', h], cwd=basename), 'utf-8')
-                    tree_sha1 = re.search(r'^tree ([0-9a-f]+)$', commit_object, re.M)
-                    message_commit = re.search('\n\n(.*)$', commit_object, re.M)
-                    date_consolidation = 'Version consolidée à une date future indéterminée' if eli_point_in_time == 'indéterminé' else message_commit.group().strip()
-                    tree_object = str(subprocess.check_output(['git', 'cat-file', '-p', tree_sha1.group(1)], cwd=basename), 'utf-8')
-                    nom = eli_domain
-                    nom = re.sub( '"', r'\"', ''.join( [ chr(c) if c < 128 else '\\%o' % c for c in bytes(re.sub(r'\\', r'\\\\', nom), 'utf-8') ] ) )
-                    nom = '"' + nom + '.md"' if '\\' in nom else nom + '.md'
-                    blob_sha1 = re.search('^100644 blob ([0-9a-f]+)\t'+re.escape(nom)+'$', tree_object, re.M)
-                    texte = str(subprocess.check_output(['git', 'cat-file', '-p', blob_sha1.group(1)], cwd=basename), 'utf-8')
+                    texte, date_consolidation = get_commit(h)
 
                     if eli_level and eli_level.startswith('article_'):
                         numero = eli_level[8:]
@@ -273,7 +442,7 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     if not error404:
                         url_eli1 = '/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '') if eli_version and eli_level and eli_level != 'texte' else None
                         url_eli2 = '/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
-                        html = html_page(markdown2html(texte, url_eli1, url_eli2), titre, date_consolidation, href.group(1)[:7])
+                        html = html_page(markdown2html(texte, 'all', url_eli1, url_eli2), titre, date_consolidation, href.group(1)[:7])
 
             # Affichage de la liste des versions
             elif regex_eli and regex_eli.group(1) in ['code'] and not regex_eli.group(4) and not regex_eli.group(6) and not regex_eli.group(8):
@@ -320,6 +489,8 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 eli_point_in_time = regex_eli.group(8).replace('-', '') if regex_eli.group(8) else None
                 eli_point_in_time = 'indéterminé' if eli_point_in_time == '22220222' else eli_point_in_time
 
+                titre = eli_domain[0].upper() + eli_domain[1:].replace('_', ' ')
+
                 if 'gitrefs' not in cache:
                     cache['gitrefs'] = str(subprocess.check_output(['git', 'show-ref'], cwd=basename), 'utf-8').strip()
                 ref = 'refs/'+eli_type+'s/'+eli_domain
@@ -347,9 +518,24 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     h = href.group(1) if href else hreff.group(1)
                     vigueur_future = False if href else True
                 if h:
-                    diff = str(subprocess.check_output(['git', 'show', h], cwd=basename), 'utf-8').strip()
-                    diff = re.sub('\n', '<br />', diff)
-                    html += diff
+                    diff = str(subprocess.check_output(['git', 'show', '--pretty=raw', h], cwd=basename), 'utf-8').strip()
+                    date_consolidation = re.search('\n\n *Version consolidée au [^\n]*\n\n', diff)
+                    diff = re.search('\n\ndiff --git[^\n]*\n(?:new file[^\n]*\n)?index [^\n]*\n--- [^\n]*\n\+\+\+[^\n]*\n(.*)', diff, re.DOTALL)
+                    diff = diff.group(1)
+                    #diffstruct = [(x[0], x[1:]) for x in diff.splitlines() if x[0] in '+- ']
+                    #diff = '<br />'.join([x[1] for x in diffstruct])
+                    diff = diff.replace('\n', '<br />')
+                    #html = html_page(diff, titre, date_consolidation.group().strip(), h[:7])
+                    try:
+                        articles_a, date_a = get_commit(h+'~1')
+                    except subprocess.CalledProcessError:
+                        articles_a, date_a = '', None
+                    articles_b, date_b = get_commit(h)
+                    articles_diff = diff_articles(articles_a, articles_b)
+                    url_eli1 = '/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
+                    url_eli2 = '/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
+                    articles_diff_html = html_diff(articles_diff, url_eli1, url_eli2)
+                    html = html_page(articles_diff_html, titre, date_consolidation.group().strip(), h[:7])
 
         elif re.match('^/($|[?#])', uri):
             if 'gitrefs' not in cache:
@@ -370,16 +556,22 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 html += '<li><a href="/eli/code/' + code + '">' + code[0].upper() + code[1:].replace('_', ' ') + '</a></li>\n'
             html += '</ul>'
 
-        elif re.match('^/(css|js)/([^.]+\.(?:css|js|otf))$', uri) and os.path.isfile( uri[1:] ):
-            with open(uri[1:], 'rb') as f:
-                bcontent = f.read()
+        elif re.match('^/(?:(?:css|js)/([^.]+\.(?:css|js|otf))|favicon\.ico)$', uri):
+            status = 404
+            bcontent = b''
+            if os.path.isfile(uri[1:]):
+                with open(uri[1:], 'rb') as f:
+                    bcontent = f.read()
+                    status = 200
             self.send_response(status)
             if uri.endswith('.css'):
                 self.send_header('Content-Type', 'text/css')
             elif uri.endswith('.js'):
-                self.send_header('Content-Type', 'text/javascript')
+                self.send_header('Content-Type', 'application/javascript')
             elif uri.endswith('.otf'):
                 self.send_header('Content-Type', 'application/octet-stream')
+            elif uri.endswith('.ico'):
+                self.send_header('Content-Type', 'image/vnd.microsoft.icon')
             self.send_header('Content-Length', len(bcontent))
             self.end_headers()
             self.wfile.write(bcontent)

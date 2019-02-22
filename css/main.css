@@ -150,3 +150,31 @@ span.surligne {
 	text-align: center;
 	margin-top: 2em;
 }
+
+.diff div.delete, .diff div.insert, .diff div.replace {
+	margin-bottom: 0.5em;
+}
+.diff .article.delete {
+	background: linear-gradient(#FDD, #fafafa);
+}
+.diff .article.insert {
+	background: linear-gradient(#74ED74, #fafafa);
+}
+.diff .delete {
+	background-color: #FDD;
+}
+.diff .insert {
+	background-color: #74ED74;
+}
+.diff .replace {
+	/*background-color: #ffffd6;*/
+}
+.diff .replace ins {
+	background-color: #e6ffe6;
+}
+.diff .replace del {
+	background-color: #ffe6e6;
+}
+.diff .replace del + ins {
+	margin-left: 1px;
+}
