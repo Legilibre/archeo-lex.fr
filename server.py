@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import http.server
+import collections
 import subprocess
 import functools
 import time
@@ -43,6 +44,43 @@ mois2 = {
     '11': 'novembre',
     '12': 'décembre',
 }
+
+def get_summary(text):
+
+    """
+    Obtain the summary in a Markdown text.
+
+    :param text:
+        (str) 
+    """
+
+    summary = collections.OrderedDict()
+    parents = [summary]
+    titles = []
+    articles = collections.OrderedDict()
+    for x in re.finditer(r'(?<=\n)(#+) ([^\n]+)', '\n' + text):
+        level = len(x.group(1))
+        title = x.group(2)
+        if title.startswith('Article '):
+            parents[-1][title] = None
+            articles[title[8:]] = titles
+        else:
+            if level < len(parents):
+                parents = parents[:level]
+                titles = titles[:level-1]
+            parents[-1][title] = collections.OrderedDict()
+            parents.append(parents[-1][title])
+            titles.append(title)
+
+    return summary, articles
+
+def print_summary(summary, i=0):
+
+    for x in summary:
+        print((' '*i) + '>' + x)
+        if summary[x] is not None:
+            print_summary(summary[x], i+1)
+
 
 def metsenformelarticle(x, mode='all', url1=None, url2=None):
 
@@ -294,20 +332,44 @@ def diff_articles(text_a, text_b):
 
     return articles
 
-def html_diff(articles, url1=None, url2=None):
+def html_diff(articles, url1=None, url2=None, articlessummary_a=None, articlessummary_b=None):
 
     dmp = diff_match_patch.diff_match_patch()
+    parents_a = []
+    parents_b = []
     html = '<div class="diff">'
     for article in articles:
 
+        title = re.match('Article [^\n]*', article[3]).group() if article[3] else re.match('Article [^\n]*', article[4]).group()
+        number = title[8:]
+
+        if article[0] in ['delete', 'insert', 'replace']:
+            if number in articlessummary_a or number in articlessummary_b:
+                m_a = len(articlessummary_a[number]) if number in articlessummary_a else 0
+                m_b = len(articlessummary_b[number]) if number in articlessummary_b else 0
+                max_ab = max(m_a, m_b)
+                for i in range(0, max_ab):
+                    if i < m_a:
+                        if articlessummary_a[number][i] not in parents_a:
+                            html += '<h3>' + articlessummary_a[number][i] + '</h3>'
+                    elif i < m_b:
+                        if articlessummary_b[number][i] not in parents_b:
+                            html += '<h3>' + articlessummary_b[number][i] + '</h3>'
+                if number in articlessummary_a:
+                    parents_a = articlessummary_a[number]
+                if number in articlessummary_b:
+                    parents_b = articlessummary_b[number]
+
         if article[0] == 'delete':
 
-            title = re.match('Article [^\n]*', article[3]).group()
             html += '<div class="article delete"><h3>' + title + '</h3>' + markdown2html(article[3][len(title):].strip(), 'article', url1, url2) + '</div>'
+
+        elif article[0] == 'insert':
+
+            html += '<div class="article insert"><h3>' + title + '</h3>' + markdown2html(article[4][len(title):].strip(), 'article', url1, url2) + '</div>'
 
         elif article[0] == 'replace':
 
-            title = re.match('Article [^\n]*', article[3]).group()
             diff = dmp.diff_main(article[3][len(title):].strip(), article[4][len(title):].strip())
             dmp.diff_cleanupSemantic(diff)
             j = 0
@@ -363,11 +425,6 @@ def html_diff(articles, url1=None, url2=None):
                 elif op == dmp.DIFF_EQUAL:
                     htmld.append(text)
             html += '<div class="article replace"><h3>' + title + '</h3>' + markdown2html(''.join(htmld), 'article', url1, url2) + '</div>'
-
-        elif article[0] == 'insert':
-
-            title = re.match('Article [^\n]*', article[4]).group()
-            html += '<div class="article insert"><h3>' + title + '</h3>' + markdown2html(article[4][len(title):].strip(), 'article', url1, url2) + '</div>'
 
     html += '</div>'
     return html
@@ -430,7 +487,6 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     vigueur_future = False if href else True
                 if h:
                     texte, date_consolidation = get_commit(h)
-
                     if eli_level and eli_level.startswith('article_'):
                         numero = eli_level[8:]
                         t = re.search(r'^#+ Article '+numero+'\n((?:(?!#)[^\n]*\n*)*)', texte, re.M)
@@ -532,9 +588,11 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                         articles_a, date_a = '', None
                     articles_b, date_b = get_commit(h)
                     articles_diff = diff_articles(articles_a, articles_b)
+                    summary_a, articlessummary_a = get_summary(articles_a)
+                    summary_b, articlessummary_b = get_summary(articles_b)
                     url_eli1 = '/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
                     url_eli2 = '/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
-                    articles_diff_html = html_diff(articles_diff, url_eli1, url_eli2)
+                    articles_diff_html = html_diff(articles_diff, url_eli1, url_eli2, articlessummary_a, articlessummary_b)
                     html = html_page(articles_diff_html, titre, date_consolidation.group().strip(), h[:7])
 
         elif re.match('^/($|[?#])', uri):
