@@ -527,11 +527,11 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                         for l in history[1]:
                             lien = 'indéterminé' if l[0] == '22220222' else l[0]
                             date = 'date indéterminée' if l[0] == '22220222' else ( l[0][6:8] if l[0][6] != '0' else l[0][7:8] ) + ('er' if l[0][6:8] == '01' else '') + ' ' + mois2[l[0][4:6]] + ' ' + l[0][0:4]
-                            html += '<li><a href="/diff' + uri + '/lc/texte/' + lien + '">' + date + '</a> (<a href="' + uri + '/lc/texte/' + lien + '">texte</a>) <i>(version future prévue)</i></li>\n'
+                            html += '<li><a href="'+baseurl+'/diff' + uri[len(baseurl):] + '/lc/texte/' + lien + '">' + date + '</a> (<a href="' + uri + '/lc/texte/' + lien + '">texte</a>) <i>(version future prévue)</i></li>\n'
                     if history[0]:
                         for l in history[0]:
                             date = ( l[0][6:8] if l[0][6] != '0' else l[0][7:8] ) + ('er' if l[0][6:8] == '01' else '') + ' ' + mois2[l[0][4:6]] + ' ' + l[0][0:4]
-                            html += '<li><a href="/diff' + uri + '/lc/texte/' + l[0] + '">' + date + '</a> (<a href="' + uri + '/lc/texte/' + l[0] + '">texte</a>)</li>\n'
+                            html += '<li><a href="'+baseurl+'/diff' + uri[len(baseurl):] + '/lc/texte/' + l[0] + '">' + date + '</a> (<a href="' + uri + '/lc/texte/' + l[0] + '">texte</a>)</li>\n'
                     if history[0] or history[1]:
                         html += '<ul>\n'
                     html = html_page(html, titre)
