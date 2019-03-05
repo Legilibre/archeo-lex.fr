@@ -614,6 +614,7 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             lcodes = list(codes.keys())
             lcodes.sort()
             html += '<p>' + str(len(codes)) + ' codes</p>'
+            html += '<p>Le graphisme de cette page n’a pas encore été repensé, contrairement aux pages suivantes, cliquez sur un des codes…</p>'
             html += '<ul>'
             for code in lcodes:
                 html += '<li><a href="'+baseurl+'/eli/code/' + code + '">' + code[0].upper() + code[1:].replace('_', ' ') + '</a></li>\n'
