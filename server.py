@@ -14,6 +14,7 @@ import diff_match_patch
 import metslesliens
 
 basename = None
+baseurl = ''
 
 cache = {}
 
@@ -221,12 +222,15 @@ def balance_html(html):
 
 
 def html_page(texte, titre, date_consolidation = None, condensat = None):
+
+    global baseurl
+
     return """<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>""" + titre + """</title>
-<link rel="stylesheet" type="text/css" href="https://archeo-lex.local/css/main.css">
+<title>""" + titre + '''</title>
+<link rel="stylesheet" type="text/css" href="'''+baseurl+"""/css/main.css">
 </head>
 <body>
 <div id="texte" class="centre">
@@ -437,7 +441,7 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
 
-        global basename, mois, mois2, cache
+        global basename, baseurl, mois, mois2, cache
 
         uri = str( bytes( [ord(c.group()) if len(c.group()) == 1 else int( c.group(1), 16 ) for c in re.finditer(r'%([0-9a-fA-F]{2})|.', self.path)] ), 'utf-8' )
 
@@ -445,8 +449,8 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         error404 = None
         html = ''
 
-        if uri.startswith('/eli/'):
-            regex_eli = re.match(r'^/eli/([a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ_-]+)/([^/]+)(/(jo|lc))?(/(texte|article_[a-z0-9._-]+))?(/([0-9]{4}-?[0-9]{2}-?[0-9]{2}|indéterminé))?(?:[?#].*)?$', uri, re.I)
+        if uri.startswith(baseurl+'/eli/'):
+            regex_eli = re.match(r'^'+baseurl+r'/eli/([a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ_-]+)/([^/]+)(/(jo|lc))?(/(texte|article_[a-z0-9._-]+))?(/([0-9]{4}-?[0-9]{2}-?[0-9]{2}|indéterminé))?(?:[?#].*)?$', uri, re.I)
 
             # Affichage du texte
             if regex_eli and regex_eli.group(1) in ['code'] and regex_eli.group(4) == 'lc':
@@ -497,8 +501,8 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                             error404 = 'Article inexistant'
 
                     if not error404:
-                        url_eli1 = '/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '') if eli_version and eli_level and eli_level != 'texte' else None
-                        url_eli2 = '/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
+                        url_eli1 = baseurl+'/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '') if eli_version and eli_level and eli_level != 'texte' else None
+                        url_eli2 = baseurl+'/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
                         html = html_page(markdown2html(texte, 'all', url_eli1, url_eli2), titre, date_consolidation, href.group(1)[:7])
 
             # Affichage de la liste des versions
@@ -536,8 +540,8 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 status = 400
                 html = 'Erreur de format d’URL'
 
-        elif uri.startswith('/diff/eli/'):
-            regex_eli = re.match(r'^/diff/eli/([a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ_-]+)/([^/]+)(/(jo|lc))?(/(texte|article_[a-z0-9._-]+))?(/([0-9]{4}-?[0-9]{2}-?[0-9]{2}|indéterminé))?(?:[?#].*)?$', uri, re.I)
+        elif uri.startswith(baseurl+'/diff/eli/'):
+            regex_eli = re.match(r'^'+baseurl+r'/diff/eli/([a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ_-]+)/([^/]+)(/(jo|lc))?(/(texte|article_[a-z0-9._-]+))?(/([0-9]{4}-?[0-9]{2}-?[0-9]{2}|indéterminé))?(?:[?#].*)?$', uri, re.I)
             if regex_eli and regex_eli.group(1) in ['code']:
                 eli_type = regex_eli.group(1)
                 eli_domain = regex_eli.group(2).replace('’', "'")
@@ -591,12 +595,12 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     articles_diff = diff_articles(articles_a, articles_b)
                     summary_a, articlessummary_a = get_summary(articles_a)
                     summary_b, articlessummary_b = get_summary(articles_b)
-                    url_eli1 = '/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
-                    url_eli2 = '/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
+                    url_eli1 = baseurl+'/eli/'+eli_type+'/'+eli_domain+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
+                    url_eli2 = baseurl+'/eli/\\2/\\3'+('/'+eli_version if eli_version else '')+'/\\1'+('/'+eli_point_in_time if eli_point_in_time else '')
                     articles_diff_html = html_diff(articles_diff, url_eli1, url_eli2, articlessummary_a, articlessummary_b)
                     html = html_page(articles_diff_html, titre, date_consolidation.group().strip(), h[:7])
 
-        elif re.match('^/($|[?#])', uri):
+        elif re.match('^'+baseurl+'/?($|[?#])', uri):
             if 'gitrefs' not in cache:
                 cache['gitrefs'] = str(subprocess.check_output(['git', 'show-ref'], cwd=basename), 'utf-8').strip()
             codes = {}
@@ -612,14 +616,14 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             html += '<p>' + str(len(codes)) + ' codes</p>'
             html += '<ul>'
             for code in lcodes:
-                html += '<li><a href="/eli/code/' + code + '">' + code[0].upper() + code[1:].replace('_', ' ') + '</a></li>\n'
+                html += '<li><a href="'+baseurl+'/eli/code/' + code + '">' + code[0].upper() + code[1:].replace('_', ' ') + '</a></li>\n'
             html += '</ul>'
 
-        elif re.match('^/(?:(?:css|js)/([^.]+\.(?:css|js|otf))|favicon\.ico)$', uri):
+        elif re.match('^'+baseurl+'/(?:(?:css|js)/([^.]+\.(?:css|js|otf))|favicon\.ico)$', uri):
             status = 404
             bcontent = b''
-            if os.path.isfile(uri[1:]):
-                with open(uri[1:], 'rb') as f:
+            if os.path.isfile(uri[len(baseurl)+1:]):
+                with open(uri[len(baseurl)+1:], 'rb') as f:
                     bcontent = f.read()
                     status = 200
             self.send_response(status)
@@ -661,8 +665,10 @@ if __name__ == "__main__":
     parser.add_argument('--repo', help='Path where is located the meta-repo codes containing all codes', required=True)
     parser.add_argument('--listen', help='Binding IP', default='127.0.0.1')
     parser.add_argument('--port', help='Binding port', type=int, default=8081)
+    parser.add_argument('--base', help='Base URL', default='')
     args = parser.parse_args()
     basename = args.repo
+    baseurl = args.base
     httpd = http.server.HTTPServer((args.listen, args.port), ArcheoLexHTTPRequestHandler)
     sa = httpd.socket.getsockname()
     t = time.time()
