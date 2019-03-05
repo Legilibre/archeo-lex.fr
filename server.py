@@ -3,6 +3,7 @@
 import http.server
 import collections
 import subprocess
+import argparse
 import functools
 import time
 import sys
@@ -12,7 +13,7 @@ import re
 import diff_match_patch
 import metslesliens
 
-basename = '/mnt/TEST/legi/codes'
+basename = None
 
 cache = {}
 
@@ -656,7 +657,13 @@ class ArcheoLexHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
 
-    httpd = http.server.HTTPServer(('127.0.0.1', 8081), ArcheoLexHTTPRequestHandler)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--repo', help='Path where is located the meta-repo codes containing all codes', required=True)
+    parser.add_argument('--listen', help='Binding IP', default='127.0.0.1')
+    parser.add_argument('--port', help='Binding port', type=int, default=8081)
+    args = parser.parse_args()
+    basename = args.repo
+    httpd = http.server.HTTPServer((args.listen, args.port), ArcheoLexHTTPRequestHandler)
     sa = httpd.socket.getsockname()
     t = time.time()
     print("***", time.strftime('[%d/%b/%Y %H:%M:%S')+('%.5f]'%(t-int(t)))[1:], "***", "Serving HTTP on", sa[0], "port", sa[1], "...")
