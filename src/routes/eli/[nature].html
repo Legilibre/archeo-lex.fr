@@ -1,0 +1,62 @@
+<svelte:head>
+	<title>{nomNatures}</title>
+</svelte:head>
+
+<h1>{nomNatures}</h1>
+
+{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=vigueur />en vigueur</label> • <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label>
+
+<ul>
+{#each Object.entries(texts) as [text, metadata]}
+<li><a href="/eli/{nature}/{text}">{text.substring(0, 1).toUpperCase()+text.substring(1).replace(/_/g, ' ')}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+{/each}
+</ul>
+
+<style>
+	a {
+		text-decoration: none;
+	}
+	span.vigueur-future {
+		color: red;
+	}
+</style>
+
+<script>
+	export default {
+		async preload({ params, query }) {
+			const nature = params.nature,
+			      nomNature = nature.substring(0, 1).toUpperCase() + nature.substring(1).replace(/_/g, ' '),
+			      nomNatures = nomNature + 's',
+			      res = await this.fetch(`eli/${nature}.json`),
+			      jsontexts = await res.json();
+
+			if (res.status === 200) {
+				return { nature, nomNature, nomNatures, jsontexts };
+			} else {
+				this.error(res.status, jsontexts.message);
+			}
+		},
+
+		data() {
+			return {
+				vigueur: true,
+				vigueur_future: false
+			}
+		},
+
+		computed: {
+
+			texts: ({ jsontexts, vigueur, vigueur_future }) => {
+				let texts = JSON.parse(JSON.stringify(jsontexts));
+				for( let item in texts ) {
+					if( (!vigueur_future && !('texte' in texts[item])) ||
+					    (!vigueur && 'texte' in texts[item])
+					) {
+						delete texts[item];
+					}
+				}
+				return texts;
+			}
+		}
+	};
+</script>

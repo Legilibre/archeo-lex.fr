@@ -1,0 +1,35 @@
+<svelte:head>
+	<title>{nom}</title>
+</svelte:head>
+
+<div id="texte" class="centre">
+
+<h1>{nom}</h1>
+
+<div class="soustitre">Version consolidée au {code.date_consolidation} <span class="version">(version {code.condensat_git})</span></div>
+
+{code.sommaire}
+
+{code.texte}
+</div>
+
+<script>
+	export default {
+		async preload({ params, query }) {
+			const identifiant = params.identifiant,
+			      nom = identifiant.substring(0, 1).toUpperCase() + identifiant.substring(1).replace(/_/g, ' ');
+			console.log([identifiant, nom]);
+
+			return {
+				identifiant,
+				nom,
+				code: {
+					date_consolidation: '25 novembre 2018',
+					condensat_git:  'b5f8387',
+					sommaire: '',
+					texte: 'abc',
+				}
+			}
+		}
+	};
+</script>
