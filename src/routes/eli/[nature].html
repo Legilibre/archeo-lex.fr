@@ -4,7 +4,7 @@
 
 <h1>{nomNatures}</h1>
 
-{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=vigueur />en vigueur</label> • <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label>
+<span>{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=vigueur />en vigueur</label> • <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label></span>
 
 <ul>
 {#each Object.entries(texts) as [text, metadata]}
@@ -23,7 +23,7 @@
 
 <script>
 	export default {
-		async preload({ params, query }) {
+		async preload({ params }) {
 			const nature = params.nature,
 			      nomNature = nature.substring(0, 1).toUpperCase() + nature.substring(1).replace(/_/g, ' '),
 			      nomNatures = nomNature + 's',

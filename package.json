@@ -1,7 +1,9 @@
 {
-  "name": "TODO",
-  "description": "TODO",
+  "name": "archeo-lex.fr",
+  "description": "Website archeo-lex.fr showing French laws and codes.",
   "version": "0.0.1",
+  "license": "WTFPL",
+  "repository": "https://github.com/Legilibre/archeo-lex.fr",
   "scripts": {
     "dev": "sapper dev",
     "build": "sapper build --legacy",

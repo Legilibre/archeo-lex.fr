@@ -6,29 +6,52 @@
 
 <h1>{nom}</h1>
 
-<div class="soustitre">Version consolidée au {code.date_consolidation} <span class="version">(version {code.condensat_git})</span></div>
+{log.length} versions
+
+<ul>
+{#each log as item}
+<li><a href="/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+{/each}
+</ul>
+<!--<div class="soustitre">Version consolidée au {code.date_consolidation} <span class="version">(version {code.condensat_git})</span></div>
 
 {code.sommaire}
 
-{code.texte}
+{code.texte}-->
 </div>
 
+<style>
+	a {
+		text-decoration: none;
+	}
+	span.vigueur-future {
+		color: red;
+	}
+</style>
+
 <script>
+
+	const moisFR = { '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril', '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août', '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre' };
+
 	export default {
 		async preload({ params, query }) {
-			const identifiant = params.identifiant,
-			      nom = identifiant.substring(0, 1).toUpperCase() + identifiant.substring(1).replace(/_/g, ' ');
-			console.log([identifiant, nom]);
+			const { nature, identifiant } = params,
+			      nom = identifiant.substring(0, 1).toUpperCase() + identifiant.substring(1).replace(/_/g, ' '),
+			      res = await this.fetch(`eli/${nature}/${identifiant}.json`),
+			      jsonlog = await res.json();
 
 			return {
+				nature,
 				identifiant,
 				nom,
-				code: {
-					date_consolidation: '25 novembre 2018',
-					condensat_git:  'b5f8387',
-					sommaire: '',
-					texte: 'abc',
-				}
+				log: jsonlog
+			}
+		},
+
+		helpers: {
+			ISO86012dateFR(iso8601) {
+				const r = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(iso8601);
+				return r ? (r[3][0] == '0' ? r[3][1] : r[3]) + (r[3] == '01' ? 'er' : '') + ' ' + moisFR[r[2]] + ' ' + r[1] : '';
 			}
 		}
 	};
