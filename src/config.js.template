@@ -1,0 +1,4 @@
+const repo = '/you/archeo-lex/git/repo';
+const natures = new Set(['code']);
+
+export { repo, natures };
