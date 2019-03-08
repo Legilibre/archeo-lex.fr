@@ -6,7 +6,7 @@
 
 <h1>{nom}</h1>
 
-<div class="soustitre">Version consolidée au {ISO86012dateFR(date)} <span class="version">(version {condensat.substring(0, 7)})</span></div>
+<div class="soustitre">Version consolidée {#if date !== '2222-02-22'}au {ISO86012dateFR(date)}{:else}à une future date indéterminée{/if} <span class="version">(version {condensat.substring(0, 7)})</span></div>
 
 {@html markdown2html(texte)}
 </div>

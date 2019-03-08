@@ -6,23 +6,23 @@
 
 <h1>{nom}</h1>
 
-{log.length} versions
+<!-- I cannot affirm for now that the code is in force (or abrogated), see https://github.com/Legilibre/Archeo-Lex/issues/62 -->
+{#if etat === 'vigueur-future'}<span class="{nature}">{nomNature} en {etat.replace('-', ' ')}{#if etat === 'vigueur'}&nbsp;(ou abrogé){/if}</span>&nbsp;;&nbsp;{/if}{versions.length} versions
 
 <ul>
-{#each log as item}
-<li><a href="/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+{#each versions as item}
+<li><a href="/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if etat === 'vigueur-future' || item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
 {/each}
 </ul>
-<!--<div class="soustitre">Version consolidée au {code.date_consolidation} <span class="version">(version {code.condensat_git})</span></div>
 
-{code.sommaire}
-
-{code.texte}-->
 </div>
 
 <style>
 	a {
 		text-decoration: none;
+	}
+	span.vigueur {
+		color: green;
 	}
 	span.vigueur-future {
 		color: red;
@@ -37,6 +37,7 @@
 		async preload({ params, query }) {
 			const { nature, identifiant } = params,
 			      nom = identifiant.substring(0, 1).toUpperCase() + identifiant.substring(1).replace(/_/g, ' '),
+			      nomNature = nature.substring(0, 1).toUpperCase() + nature.substring(1).replace(/_/g, ' '),
 			      res = await this.fetch(`eli/${nature}/${identifiant}.json`),
 			      jsonlog = await res.json();
 
@@ -44,7 +45,9 @@
 				nature,
 				identifiant,
 				nom,
-				log: jsonlog
+				nomNature,
+				etat: jsonlog.etat,
+				versions: jsonlog.versions
 			}
 		},
 

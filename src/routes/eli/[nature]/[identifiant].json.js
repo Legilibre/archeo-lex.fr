@@ -32,9 +32,15 @@ const list_refs = async () => {
 	return texts;
 };
 
-const list_revs = async (hash, state) => {
+const list_revs = async (hash, state, default_state) => {
 	const data = await git.log({ [hash]: null, format: { hash: '%H', message: '%s' }});
-	return data.all.map(item => { return { hash: item.hash, date: dateFR2ISO8601(item.message), etat: state } });
+	return data.all.map(item => {
+		let t = { hash: item.hash, date: dateFR2ISO8601(item.message) };
+		if( state !== default_state ) {
+			t['etat'] = state;
+		}
+		return t;
+	});
 };
 
 export async function get(req, res) {
@@ -63,14 +69,15 @@ export async function get(req, res) {
 			}));
 		}
 
+		const default_state = vigueur ? 'vigueur' : 'vigueur-future';
 		let revs = [];
 		if( vigueur_future ) {
-			revs = revs.concat(await list_revs((vigueur?vigueur+'...':'')+vigueur_future, 'vigueur-future'));
+			revs = revs.concat(await list_revs((vigueur?vigueur+'...':'')+vigueur_future, 'vigueur-future', default_state));
 		}
 		if( vigueur ) {
-			revs = revs.concat(await list_revs(vigueur, 'vigueur'));
+			revs = revs.concat(await list_revs(vigueur, 'vigueur', default_state));
 		}
-		res.end(JSON.stringify(revs));
+		res.end(JSON.stringify({etat: default_state, versions: revs}));
 	} else {
 		res.writeHead(404, {
 			'Content-Type': 'application/json'
