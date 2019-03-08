@@ -1,14 +1,14 @@
 <svelte:head>
-	<title>{nomNatures}</title>
+	<title>{ucfirst(nature)}s</title>
 </svelte:head>
 
-<h1>{nomNatures}</h1>
+<h1>{ucfirst(nature)}s</h1>
 
 <span>{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=vigueur />en vigueur</label> • <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label></span>
 
 <ul>
 {#each Object.entries(texts) as [text, metadata]}
-<li><a href="/eli/{nature}/{text}">{text.substring(0, 1).toUpperCase()+text.substring(1).replace(/_/g, ' ')}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+<li><a href="/eli/{nature}/{text}">{ucfirst(text)}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
 {/each}
 </ul>
 
@@ -24,14 +24,12 @@
 <script>
 	export default {
 		async preload({ params }) {
-			const nature = params.nature,
-			      nomNature = nature.substring(0, 1).toUpperCase() + nature.substring(1).replace(/_/g, ' '),
-			      nomNatures = nomNature + 's',
+			const { nature } = params,
 			      res = await this.fetch(`eli/${nature}.json`),
 			      jsontexts = await res.json();
 
 			if (res.status === 200) {
-				return { nature, nomNature, nomNatures, jsontexts };
+				return { nature, jsontexts };
 			} else {
 				this.error(res.status, jsontexts.message);
 			}
@@ -56,6 +54,13 @@
 					}
 				}
 				return texts;
+			}
+		},
+
+		helpers: {
+			ucfirst(s) {
+				s = s.trim().replace(/_/g, ' ');
+				return s.substring(0, 1).toUpperCase() + s.substring(1);
 			}
 		}
 	};
