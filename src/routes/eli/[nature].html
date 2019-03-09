@@ -8,7 +8,7 @@
 
 <ul>
 {#each Object.entries(texts) as [text, metadata]}
-<li><a href="/eli/{nature}/{text}">{ucfirst(text)}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+<li><a href="{base}/eli/{nature}/{text}">{ucfirst(text)}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
 {/each}
 </ul>
 
@@ -22,6 +22,9 @@
 </style>
 
 <script>
+
+	import { base } from "../../config";
+
 	export default {
 		async preload({ params }) {
 			const { nature } = params,
@@ -29,7 +32,7 @@
 			      jsontexts = await res.json();
 
 			if (res.status === 200) {
-				return { nature, jsontexts };
+				return { base, nature, jsontexts };
 			} else {
 				this.error(res.status, jsontexts.message);
 			}
@@ -43,10 +46,9 @@
 		},
 
 		computed: {
-
 			texts: ({ jsontexts, vigueur, vigueur_future }) => {
-				let texts = JSON.parse(JSON.stringify(jsontexts));
-				for( let item in texts ) {
+				let item, texts = JSON.parse(JSON.stringify(jsontexts));
+				for( item in texts ) {
 					if( (!vigueur_future && !('texte' in texts[item])) ||
 					    (!vigueur && 'texte' in texts[item])
 					) {

@@ -1,4 +1,16 @@
-const repo = '/you/archeo-lex/git/repo';
+/**
+ * Configuration file
+ *
+ * Copy it without the .template extension and customise it.
+ */
+
+// base: '' when the app is at the root URL, else '/whatever'
+const base = '';
+
+// natures: set of acceptable natures, e.g. ['code', 'loi', 'loi_organique']
 const natures = new Set(['code']);
 
-export { repo, natures };
+// repo: path in local filesystem where is located the meta-repo from Archéo Lex (still not available, it has to be made by yourself)
+const repo = '/your/archeo-lex/git/repo';
+
+export { base, repo, natures };

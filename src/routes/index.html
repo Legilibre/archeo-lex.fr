@@ -6,7 +6,7 @@
 
 <p><strong>permet de rechercher dans l’historique des lois</strong></p>
 
-<p><a rel="prefetch" href="eli/code">Codes</a></p>
+<p><a rel="prefetch" href="{base}/eli/code">Codes</a></p>
 
 <style>
 	h1, p {
@@ -29,3 +29,14 @@
 		}
 	}
 </style>
+
+<script>
+
+	import { base } from "../config";
+
+	export default {
+		async preload({ params }) {
+			return { base };
+		}
+	};
+</script>

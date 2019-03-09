@@ -4,16 +4,16 @@
 
 <div id="texte" class="centre">
 
-<h1>{nom}</h1>
+<h1>{ucfirst(identifiant)}</h1>
 
-<p>&lt; <a href="/eli/{nature}">{ucfirst(nature)}s</a></p>
+<p>&lt; <a href="{base}/eli/{nature}">{ucfirst(nature)}s</a></p>
 
 <!-- I cannot affirm for now that the code is in force (or abrogated), see https://github.com/Legilibre/Archeo-Lex/issues/62 -->
 <p>{#if etat === 'vigueur-future'}<span class="{nature}">{ucfirst(nature)} en {etat.replace('-', ' ')}{#if etat === 'vigueur'}&nbsp;(ou abrogé){/if}</span>&nbsp;;&nbsp;{/if}{versions.length} versions</p>
 
 <ul>
 {#each versions as item}
-<li><a href="/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if etat === 'vigueur-future' || item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+<li><a href="{base}/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if etat === 'vigueur-future' || item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
 {/each}
 </ul>
 
@@ -33,6 +33,8 @@
 
 <script>
 
+	import { base } from "../../../config";
+
 	const moisFR = { '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril', '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août', '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre' };
 
 	export default {
@@ -42,6 +44,7 @@
 			      jsonlog = await res.json();
 
 			return {
+				base,
 				nature,
 				identifiant,
 				etat: jsonlog.etat,
