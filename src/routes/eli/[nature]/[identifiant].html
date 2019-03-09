@@ -6,7 +6,7 @@
 
 <h1>{ucfirst(identifiant)}</h1>
 
-<p>&lt; <a href="{base}/eli/{nature}">{ucfirst(nature)}s</a></p>
+<p>&lt; <a rel="prefetch" href="{base}/eli/{nature}">{ucfirst(nature)}s</a></p>
 
 <!-- I cannot affirm for now that the code is in force (or abrogated), see https://github.com/Legilibre/Archeo-Lex/issues/62 -->
 <p>{#if etat === 'vigueur-future'}<span class="{nature}">{ucfirst(nature)} en {etat.replace('-', ' ')}{#if etat === 'vigueur'}&nbsp;(ou abrogé){/if}</span>&nbsp;;&nbsp;{/if}{versions.length} versions</p>
