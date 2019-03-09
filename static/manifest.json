@@ -1,8 +1,8 @@
 {
 	"background_color": "#ffffff",
 	"theme_color": "#aa1e1e",
-	"name": "TODO",
-	"short_name": "TODO",
+	"name": "archeo-lex.fr",
+	"short_name": "archeo-lex.fr",
 	"display": "minimal-ui",
 	"start_url": "/",
 	"icons": [
