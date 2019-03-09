@@ -13,7 +13,7 @@
 
 <ul>
 {#each versions as item}
-<li><a href="{base}/eli/{nature}/{identifiant}/lc/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if etat === 'vigueur-future' || item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+<li><a href="{base}/eli/{nature}/{identifiant}/lc/texte/{item.date.replace(/-/g, '')}">{#if item.date === '2222-02-22'}date indéterminée{:else}{ISO86012dateFR(item.date)}{/if}</a>{#if etat === 'vigueur-future' || item.etat == 'vigueur-future'}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
 {/each}
 </ul>
 
