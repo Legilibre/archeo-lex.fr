@@ -18,6 +18,7 @@ body {
 .centre {
 	margin: auto;
 }
+/*
 #texte {
 	width: 75%;
 }
@@ -26,6 +27,7 @@ body {
 		width: 95%;
 	}
 }
+*/
 .article {
 	/*border: 1px dashed black;/ **/
 	padding: 0 0.7em;
