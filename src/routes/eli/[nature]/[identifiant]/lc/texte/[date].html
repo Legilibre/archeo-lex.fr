@@ -1,0 +1,61 @@
+<svelte:head>
+	<title>{ucfirst(identifiant)}</title>
+</svelte:head>
+
+<div id="texte" class="centre">
+
+<h1>{ucfirst(identifiant)}</h1>
+
+<p>&lt; <a rel="prefetch" href="{base}/eli/{nature}">{ucfirst(nature)}s</a> &lt; <a rel="prefetch" href="{base}/eli/{nature}/{identifiant}">{ucfirst(identifiant)}</a></p>
+
+<div class="soustitre">Version consolidée {#if date !== '2222-02-22'}au {ISO86012dateFR(date)}{:else}à une future date indéterminée{/if} <span class="version">(version {condensat.substring(0, 7)})</span></div>
+
+{@html markdown2html(texte)}
+</div>
+
+<script>
+
+	import { base } from "../../../../../config";
+
+	const moisFR = { '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril', '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août', '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre' };
+
+	function markdown2html(markdown) {
+
+		let html = '\n' + markdown + '\n'
+
+		html = html.replace(/^(#+) (.*)$/gm, (match, p1, p2) => { return '<h2 class="h' + p1.length + '">' + p2 + '</h2>' });
+
+		return html;
+	}
+
+	export default {
+		async preload({ params }) {
+			const { nature, identifiant, date } = params,
+			      res = await this.fetch(`eli/${nature}/${identifiant}/lc/${date}.json`),
+			      texte = await res.json();
+
+			return {
+				base,
+				nature,
+				identifiant,
+				condensat: texte.condensat,
+				date: texte.date,
+				texte: texte.texte
+			}
+		},
+
+		helpers: {
+			ISO86012dateFR(iso8601) {
+				const r = /^([0-9]{4})-?([0-9]{2})-?([0-9]{2})$/.exec(iso8601);
+				return r ? (r[3][0] == '0' ? r[3][1] : r[3]) + (r[3] == '01' ? 'er' : '') + ' ' + moisFR[r[2]] + ' ' + r[1] : '';
+			},
+			markdown2html(markdown) {
+				return markdown2html(markdown);
+			},
+			ucfirst(s) {
+				s = s.trim().replace(/_/g, ' ');
+				return s.substring(0, 1).toUpperCase() + s.substring(1);
+			}
+		}
+	};
+</script>
