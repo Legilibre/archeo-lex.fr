@@ -1,26 +1,5 @@
-import * as config from '../../config';
-
-const git = require('simple-git/promise')(config.repo);
-
-const list_refs = async () => {
-	const showref = await git.raw(['show-ref']);
-
-	const refs = showref.trim().split('\n').reduce( (obj, item) => {
-		let r = /^([0-9a-f]+) (refs\/.*)$/.exec(item);
-		obj[r[2]] = r[1];
-		return obj;
-	}, {});
-
-	let texts = {};
-	for( let item in refs) {
-		let r = /^refs\/([^\/]+)\/([^\/]+)\/(texte(?:-futur)?)$/.exec(item);
-		if( r ) {
-			texts[r[2]] = Object.assign(texts[r[2]] || {}, {nature: r[1].replace(/s$/, ''), [r[3]]: refs[item]});
-		}
-	}
-
-	return texts;
-};
+import config from '../../config';
+import git from '../../lib/git';
 
 export async function get(req, res) {
 
@@ -31,7 +10,7 @@ export async function get(req, res) {
 			'Content-Type': 'application/json'
 		});
 
-		const texts = await list_refs();
+		const texts = await git.list_refs(config.repo);
 		for( let item in texts ) {
 			if( texts[item].nature != nature ) {
 				delete texts[item];

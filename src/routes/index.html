@@ -26,11 +26,11 @@
 
 <script>
 
-	import { base } from "../config";
+	import config from "../config";
 
 	export default {
 		async preload({ params }) {
-			return { base };
+			return { base: config.base };
 		}
 	};
 </script>

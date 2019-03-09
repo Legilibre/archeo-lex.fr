@@ -14,7 +14,7 @@
 
 <script>
 
-	import { base } from "../../config";
+	import config from "../../config";
 
 	export default {
 		async preload({ params }) {
@@ -23,7 +23,7 @@
 			      jsontexts = await res.json();
 
 			if (res.status === 200) {
-				return { base, nature, jsontexts };
+				return { base: config.base, nature, jsontexts };
 			} else {
 				this.error(res.status, jsontexts.message);
 			}
