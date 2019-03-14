@@ -28,6 +28,25 @@ function balance_html(text) {
 	return text;
 }
 
+function markdown_article(text) {
+
+	// Paragraphs
+	text = ('\n\n'+text+'\n\n').replace(/^\n([^\n]+)(?=\n\n)/gm, (match, p1) => {
+		let t = '<p><span>' + p1 + '</span></p>';
+		t = t.replace(/<ins>/g, '</span><ins>');
+		t = t.replace(/<del>/g, '</span><del>');
+		t = t.replace(/<\/ins>/g, '</ins><span>');
+		t = t.replace(/<\/del>/g, '</del><span>');
+		return t;
+	});
+
+	text = text.replace(/<span><\/span>/g, '');
+	text = text.replace(/<del><\/del>/g, '');
+	text = text.replace(/<ins><\/ins>/g, '');
+
+	return text;
+}
+
 function markdown2html(markdown) {
 
 	let html = '\n' + markdown + '\n'
@@ -42,7 +61,7 @@ function markdown2html(markdown) {
 
 	// Transform articles
 	html = html.replace(/^(?:#+) Article ([^\n]+)\n((?:(?!#)[^\n]*\n*)*)/gm, (match, p1, p2) => {
-		return '<div id="article_' + p1 + '" class="article"><h3>Article ' + p1 + '</h3>\n' + balance_html(p2) + '</div>\n\n';
+		return '<div id="article_' + p1 + '" class="article"><h3>Article ' + p1 + '</h3>\n' + markdown_article(balance_html(p2)) + '</div>\n\n';
 	});
 
 	// Transform headers
