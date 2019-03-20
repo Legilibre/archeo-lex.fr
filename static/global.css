@@ -48,6 +48,9 @@ span.vigueur {
 span.vigueur-future {
 	color: red;
 }
+span.abroge {
+	color: blue;
+}
 /*
 h2.h1::before {
 	content: '> ';

@@ -18,7 +18,7 @@ async function list_refs(repo) {
 	let r, item, texts = {};
 
 	for( item in refs) {
-		r = /^refs\/([^\/]+)\/([^\/]+)\/(texte(?:-futur)?)$/.exec(item);
+		r = /^refs\/([^\/]+)\/([^\/]+)\/(texte(?:-futur|-abrogé)?)$/.exec(item);
 		if( r ) {
 			texts[r[2]] = Object.assign(texts[r[2]] || {}, {nature: r[1].replace(/s$/, ''), [r[3]]: refs[item]});
 		}

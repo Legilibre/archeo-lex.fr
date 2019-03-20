@@ -4,13 +4,20 @@
 
 <h1>{ucfirst(nature)}s</h1>
 
-<span>{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=vigueur />en vigueur</label> • <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label></span>
+<span>{Object.keys(texts).length} {nature}{#if Object.keys(texts).length != '1'}s{/if} : <label><input type="checkbox" bind:checked=abroge />abrogés</label>&nbsp;• <label><input type="checkbox" bind:checked=vigueur />en vigueur</label>&nbsp;• <label><input type="checkbox" bind:checked=vigueur_future />en vigueur future</label></span>
 
 <ul>
 {#each Object.entries(texts) as [text, metadata]}
-<li><a href="{base}/eli/{nature}/{text}">{ucfirst(text)}</a>{#if !('texte' in metadata)}<span class="vigueur-future">&nbsp;(vigueur future)</span>{/if}</li>
+<li><a href="{base}/eli/{nature}/{text}">{ucfirst(text)}</a>{#if !('texte' in metadata) && 'texte-futur' in metadata}<span class="vigueur-future">&nbsp;(vigueur future)</span>{:elseif 'texte-abrogé' in metadata}<span class="abroge">&nbsp;(abrogé)</span>{/if}</li>
 {/each}
 </ul>
+
+<style>
+	label input[type=checkbox] {
+		position: relative;
+		top: 2px;
+	}
+</style>
 
 <script>
 
@@ -31,16 +38,18 @@
 
 		data() {
 			return {
+				abroge: false,
 				vigueur: true,
 				vigueur_future: false
 			}
 		},
 
 		computed: {
-			texts: ({ jsontexts, vigueur, vigueur_future }) => {
+			texts: ({ jsontexts, abroge, vigueur, vigueur_future }) => {
 				let item, texts = JSON.parse(JSON.stringify(jsontexts));
 				for( item in texts ) {
-					if( (!vigueur_future && !('texte' in texts[item])) ||
+					if( (!abroge && !('texte' in texts[item]) && 'texte-abrogé' in texts[item]) ||
+					    (!vigueur_future && !('texte' in texts[item]) && 'texte-futur' in texts[item]) ||
 					    (!vigueur && 'texte' in texts[item])
 					) {
 						delete texts[item];
