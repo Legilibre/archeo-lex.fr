@@ -1,8 +1,8 @@
 .DS_Store
 .swp
 *~
+node_modules/
 /src/config.js
-/node_modules/
 /yarn-error.log
 /cypress/screenshots/
 /__sapper__/
