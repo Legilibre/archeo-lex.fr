@@ -13,5 +13,8 @@ const natures = new Set(['code']);
 // repo: path in local filesystem where is located the meta-repo from Archéo Lex (still not available, it has to be made by yourself)
 const repo = '/your/archeo-lex/git/repo';
 
-const config = { base, repo, natures };
+// devServer: HMR callback connection for the development server, used in Content-Security-Policy
+const devServer = 'http://127.0.0.1:10000';
+
+const config = { base, repo, natures, devServer };
 export default config;
