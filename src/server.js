@@ -32,7 +32,6 @@ polka()
 			workerSrc: ["'self'"],
 			imgSrc: ["'self'"],
 		},
-		reportOnly: dev
 	}))
 	.use(
 		base,
