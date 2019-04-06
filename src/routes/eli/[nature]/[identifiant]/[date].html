@@ -4,11 +4,9 @@
 
 <div id="texte" class="centre">
 
-<h1>{ucfirst(identifiant)}</h1>
+<h1>Version consolidée {#if date !== '2222-02-22'}au {ISO86012dateFR(date)}{:else}à une future date indéterminée{/if}</h1>
 
-<p>&lt; <a rel="prefetch" href="{base}/eli/{nature}">{ucfirst(nature)}s</a> &lt; <a rel="prefetch" href="{base}/eli/{nature}/{identifiant}">{ucfirst(identifiant)}</a></p>
-
-<div class="soustitre">Version consolidée {#if date !== '2222-02-22'}au {ISO86012dateFR(date)}{:else}à une future date indéterminée{/if} <span class="version">(version {condensat.substring(0, 7)})</span></div>
+<p>&lt; <a rel="prefetch" href="{base}/eli/{nature}">{ucfirst(nature)}s</a> &lt; <a rel="prefetch" href="{base}/eli/{nature}/{identifiant}">{ucfirst(identifiant)}</a> <span class="version"># <span title="Référence unique (commit Git)">{condensat.substring(0, 7)}</span></span></p>
 
 {@html markdown2html(texte)}
 </div>
