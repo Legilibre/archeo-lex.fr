@@ -36,7 +36,6 @@ h2.soustitre {
 
 <script>
 
-	import DiffMatchPatch from 'diff-match-patch';
 	import config from '../../../../../../../config';
 	import markdown from '../../../../../../../lib/markdown';
 	import l10n from '../../../../../../../lib/l10n';
@@ -45,7 +44,12 @@ h2.soustitre {
 		async preload({ params }) {
 			const { nature, identifiant, date } = params,
 			      res = await this.fetch(`diff/eli/${nature}/${identifiant}/lc/texte/${date}.json`),
-			      texte = await res.json()
+			      texte = res.status === 200 ? await res.json() : {}
+
+			if( res.status !== 200 ) {
+				this.error( res.status, 'Missing' )
+				return
+			}
 
 			return {
 				base: config.base,

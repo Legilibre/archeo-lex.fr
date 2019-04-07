@@ -67,6 +67,16 @@ self.addEventListener('fetch', event => {
 		caches
 			.open(`offline${timestamp}`)
 			.then(async cache => {
+				// Expires at 20:00:00 CE(S)T
+				let d = new Date(), d2
+				d.setHours(20)
+				d.setMinutes(0)
+				d.setSeconds(0)
+				d2 = Math.round((d - new Date())/1000)
+				if( d2 > 300 && d2 < 57600 ) {
+					const response = await cache.match(event.request);
+					if (response) return response;
+				}
 				try {
 					const response = await fetch(event.request);
 					cache.put(event.request, response.clone());

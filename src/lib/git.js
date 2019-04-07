@@ -28,8 +28,8 @@ async function list_refs(repo) {
 }
 
 async function list_revs(repo, hash, state) {
-	const data = await gitp(repo).log({ [hash]: null, format: { hash: '%H', message: '%s' }});
-	return data.all.map(item => { return { hash: item.hash, date: dateFR2ISO8601(item.message), etat: state } });
+	const data = await gitp(repo).log({ [hash]: null, format: { hash: '%H', message: '%s', tree: '%T' }});
+	return data.all.map(item => { return { hash: item.hash, date: dateFR2ISO8601(item.message), tree: item.tree, etat: state } });
 }
 
 async function cat_file(repo, hash) {
@@ -37,5 +37,44 @@ async function cat_file(repo, hash) {
 	return data;
 }
 
+async function get_commit(repo, hash) {
+	const git = gitp(repo),
+	      log = await git.raw(['log', '-1', '--pretty=%H %T %ai %s', hash]),
+	      r = /^([0-9a-f]+) ([0-9a-f]+) ([0-9]{4}-[0-9]{2}-[0-9]{2}) 00:00:00 \+0[12]00 (.*)$/.exec( log.trim() )
+	return {
+		hash: r[1],
+		date: dateFR2ISO8601(r[4]),
+		tree: r[2],
+	}
+}
 
-export default { dateFR2ISO8601, list_refs, list_revs, cat_file };
+async function get_commit_older_than(repo, hash, state, date) {
+	const git = gitp(repo)
+	date = date.substring(0, 4) + '-' + date.substring(4, 6) + '-' + date.substring(6, 8)
+	if( date >= "19700103" ) {
+		let log = await git.raw(['log', '--before='+date, '-1', '--pretty=%H %T %ai %s', hash])
+		if( log ) {
+			let r = /^([0-9a-f]+) ([0-9a-f]+) ([0-9]{4}-[0-9]{2}-[0-9]{2}) 00:00:00 \+0[12]00 (.*)$/.exec( log.trim() )
+			if( state === 'vigueur-future' && r[3] !== date ) {
+				return null
+			}
+			return {
+				hash: r[1],
+				date: r[3],
+				tree: r[2],
+				etat: state,
+			}
+		}
+		if( state === 'vigueur-future' ) {
+			return null
+		}
+	}
+	const data = await git.log({ [hash]: null, format: { hash: '%H', message: '%s', tree: '%T' }});
+	const older = data.all.map(item => { return { hash: item.hash, date: dateFR2ISO8601(item.message), tree: item.tree, etat: state } }).filter(s => {
+		return s.date <= date
+	})
+	return older.length >= 1 ? older[0] : null
+}
+
+
+export default { dateFR2ISO8601, list_refs, list_revs, cat_file, get_commit_older_than, get_commit };

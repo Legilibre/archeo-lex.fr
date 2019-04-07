@@ -20,7 +20,7 @@
 	export default {
 		async preload({ params }) {
 			const { nature, identifiant, date } = params,
-			      res = await this.fetch(`eli/${nature}/${identifiant}/lc/${date}.json`),
+			      res = await this.fetch(`eli/${nature}/${identifiant}/lc/texte/${date}.json`),
 			      texte = await res.json();
 
 			return {
