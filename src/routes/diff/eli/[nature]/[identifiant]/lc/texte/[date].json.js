@@ -1,6 +1,6 @@
 import DiffMatchPatch from 'diff-match-patch';
-import config from '../../../../../../config'
-import git from '../../../../../../lib/git'
+import config from '../../../../../../../config'
+import git from '../../../../../../../lib/git'
 import { diff_articles } from '../../../../../../../lib/diff';
 
 function is404(res) {
@@ -48,14 +48,14 @@ export async function get(req, res) {
 	const tree = await git.cat_file(config.repo, rev.tree),
 	      blob_hash = /^100644 blob ([0-9a-f]+)/m.exec(tree)[1],
 	      blob = await git.cat_file(config.repo, blob_hash),
-	      commit_prev = await git.get_commit(config.repo, rev.hash+'~1'),
-	      tree_prev = await git.cat_file(config.repo, commit_prev.tree),
+	      rev_prev = await git.get_commit(config.repo, rev.hash+'~1'),
+	      tree_prev = await git.cat_file(config.repo, rev_prev.tree),
 	      blob_hash_prev = /^100644 blob ([0-9a-f]+)/m.exec(tree_prev)[1],
 	      blob_prev = await git.cat_file(config.repo, blob_hash_prev)
 
 	let dmp = new DiffMatchPatch()
 
-	let diffs = diff_articles(prev_blob, blob).filter(s => {
+	let diffs = diff_articles(blob_prev, blob).filter(s => {
 		return s[0] !== 'equal'
 	}).map(s => {
 		let diffs_articles = dmp.diff_main(s[5], s[6])
@@ -74,9 +74,9 @@ export async function get(req, res) {
 	})
 
 	const result = {
-		date_prev: prev_rev.date,
-		condensat_prev: prev_rev.hash,
-		etat_prev: prev_rev.etat,
+		date_prev: rev_prev.date,
+		condensat_prev: rev_prev.hash,
+		etat_prev: rev_prev.etat,
 		date: rev.date,
 		condensat: rev.hash,
 		etat: rev.etat,
