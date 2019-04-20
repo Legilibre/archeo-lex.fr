@@ -55,7 +55,9 @@ export async function get(req, res) {
 
 	let dmp = new DiffMatchPatch()
 
-	let diffs = diff_articles(blob_prev, blob).filter(s => {
+	let { articles, moved_articles } = diff_articles(blob_prev, blob)
+
+	let diffs = articles.filter(s => {
 		return s[0] !== 'equal'
 	}).map(s => {
 		let diffs_articles = dmp.diff_main(s[5], s[6])
