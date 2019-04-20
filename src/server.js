@@ -29,6 +29,7 @@ polka()
 			fontSrc: ["'self'"],
 			baseUri: ["'self'"],
 			connectSrc: connectSrc,
+			childSrc: ["'self'"],
 			workerSrc: ["'self'"],
 			imgSrc: ["'self'"],
 		},
