@@ -28,21 +28,21 @@ function cmp_articles(a, b) {
 function diff_articles(text_a, text_b) {
 
 	const article_regex = /^(#+ )((?:Article )?)([^\n]+)\n*((?:(?!#)[^\n]*\n*)*)/gm
-	let x, articles_a = {}, articles = {}, summary_a = [], summary_b = []
+	let x, articles_a = new Set(), articles = {}, summary_a = [], summary_b = []
 	while( x = article_regex.exec(text_a) ) {
 		summary_a.push( x[1] + x[2] + x[3] )
 		if( !x[2] ) {
 			continue
 		}
 		articles[x[3]] = ['delete', x[3], '', x.index, null, x[4], '']
-		articles_a[x[4]] = x[3]
+		articles_a.add(x[3]+'\n\n'+x[4])
 	}
 	while( x = article_regex.exec(text_b) ) {
 		summary_b.push( x[1] + x[2] + x[3] )
 		if( !x[2] ) {
 			continue
 		}
-		if( x[4] in articles_a && x[3] === articles_a[x[4]] ) {
+		if( articles_a.has(x[3]+'\n\n'+x[4]) ) {
 			articles[x[3]] = ['equal', x[3], x[3], articles[x[3]][3], x.index, x[4], x[4]]
 		//} else if( x[4] in articles_a ) {
 		//	// This will become move/rename operation, but it will probably handled in a separate data structure
