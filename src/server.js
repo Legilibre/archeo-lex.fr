@@ -31,6 +31,7 @@ polka()
 			connectSrc: connectSrc,
 			childSrc: ["'self'"],
 			workerSrc: ["'self'"],
+			manifestSrc: ["'self'"],
 			imgSrc: ["'self'"],
 		},
 	}))
