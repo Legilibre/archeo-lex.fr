@@ -50,7 +50,7 @@ function diff_articles(text_a, text_b) {
 			continue
 		}
 		ident = x[4] in articles_a
-		if( ident && articles_a[x[4]].indexOf(x[3]) !== -1 ) {
+		if( ident && articles_a[x[4]][0].has(x[3]) !== -1 ) {
 			articles[x[3]] = ['equal', x[3], x[3], articles[x[3]][3], x.index, x[4], x[4]]
 			articles_a[x[4]][0].delete(x[3])
 			if( articles_a[x[4]][0].size === 0 &&  articles_a[x[4]][1].size === 0 ) {
