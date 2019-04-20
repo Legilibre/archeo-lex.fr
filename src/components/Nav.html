@@ -1,9 +1,16 @@
+<svelte:window on:online="set({ online: true })" on:offline="set({ online: false })" />
+
 <nav>
 	<ul>
 		<li><a class='{path === "/" ? "selected" : ""}' href=".">accueil</a></li>
 		<li><a class='{path === "/about" ? "selected" : ""}' href="about">à propos</a></li>
 		<li><a rel="prefetch" class='{path === "/eli/code" ? "selected" : ""}' href="eli/code">codes</a></li>
 	</ul>
+	{#if online !== null}
+	<ul class="right">
+		<li><span title='{online ? "En ligne" : "Hors ligne"}'>{#if online}✓{:else}✗{/if}</span></li>
+	</ul>
+	{/if}
 </nav>
 
 <style>
@@ -16,6 +23,11 @@
 	ul {
 		margin: 0;
 		padding: 0;
+		display: inline-block;
+	}
+
+	ul.right {
+		float: right;
 	}
 
 	/* clearfix */
@@ -45,9 +57,25 @@
 		bottom: -1px;
 	}
 
-	a {
+	a, span {
 		text-decoration: none;
 		padding: 1em 0.5em;
 		display: block;
 	}
 </style>
+
+<script>
+	export default {
+		data() {
+			return {
+				online: null,
+			}
+		},
+
+		oncreate() {
+			if( navigator && typeof navigator.onLine === "boolean" ) {
+				this.set({ online: navigator && navigator.onLine })
+			}
+		},
+	};
+</script>
