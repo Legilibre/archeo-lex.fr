@@ -60,8 +60,8 @@ function markdown2html(markdown) {
 	html = html.replace(/<div[^\/>]*\/>/g, '');
 
 	// Transform articles
-	html = html.replace(/^(?:#+) Article ([^\n]+)\n((?:(?!#)[^\n]*\n*)*)/gm, (match, p1, p2) => {
-		return '<div id="article_' + p1 + '" class="article"><h3>Article ' + p1 + '</h3>\n' + markdown_article(balance_html(p2)) + '</div>\n\n';
+	html = html.replace(/^(?:#+) ((?:<ins>|<del>)?)Article ([^\n]+)\n((?:(?!#)[^\n]*\n*)*)/gm, (match, p1, p2, p3) => {
+		return '<div id="article_' + p2 + '" class="article"><h3>' + p1 + 'Article ' + p2 + '</h3>\n' + markdown_article(balance_html(p3)) + '</div>\n\n';
 	});
 
 	// Transform headers

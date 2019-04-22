@@ -1,3 +1,6 @@
+import { lcs } from './lcs'
+import { ratcliff_obershelp } from './ratcliff_obershelp'
+
 function cmp_articles(a, b) {
 
 	if( a === b ) {
@@ -17,7 +20,6 @@ function cmp_articles(a, b) {
  * The two texts must have their articles names formatted in Markdown: on a single line, beginning
  * with one or more hash characters, followed by the string " Article " followed by the article name.
  *
- * TODO compare the summaries
  * TODO classify between renamed and moved articles (renamed is in the same location in the summary)
  * TODO detect moved headers
  *
@@ -32,12 +34,14 @@ function cmp_articles(a, b) {
 function diff_articles(text_a, text_b) {
 
 	const article_regex = /^(#+ )((?:Article )?)([^\n]+)\n*((?:(?!#)[^\n]*\n*)*)/gm
-	let x, ident, articles_a = {}, articles = {}, summary_a = [], summary_b = []
+	let x, ident, articles_a = {}, articles = {}, summary_a = [], summary_b = [], summary_a_raw = [], summary_b_raw = []
 	while( x = article_regex.exec(text_a) ) {
-		summary_a.push( x[1] + x[2] + x[3] )
+		summary_a.push( [ x.index, x[1].length-1, x[2] + x[3] ] )
+		summary_a_raw.push( x[2] + x[3] )
 		if( !x[2] ) {
 			continue
 		}
+		x[4] = x[4].trim()
 		articles[x[3]] = ['delete', x[3], '', x.index, null, x[4], '']
 		if( ! (x[4] in articles_a) ) {
 			articles_a[x[4]] = [new Set(), new Set()]
@@ -45,10 +49,12 @@ function diff_articles(text_a, text_b) {
 		articles_a[x[4]][0].add(x[3])
 	}
 	while( x = article_regex.exec(text_b) ) {
-		summary_b.push( x[1] + x[2] + x[3] )
+		summary_b.push( [ x.index, x[1].length-1, x[2] + x[3] ] )
+		summary_b_raw.push( x[2] + x[3] )
 		if( !x[2] ) {
 			continue
 		}
+		x[4] = x[4].trim()
 		ident = x[4] in articles_a
 		if( ident && articles_a[x[4]][0].has(x[3]) !== -1 ) {
 			articles[x[3]] = ['equal', x[3], x[3], articles[x[3]][3], x.index, x[4], x[4]]
@@ -68,12 +74,45 @@ function diff_articles(text_a, text_b) {
 		}
 	}
 
+	let matching_blocks = ratcliff_obershelp( summary_a_raw, summary_b_raw)
+	let opcodes = opcodes_from_matching_blocks( matching_blocks )
+	let summary = [], i, j, level = -1
+	for( i=0; i<opcodes.length; i++ ) {
+		if( opcodes[i][0] === 'equal' ) {
+			for( j=opcodes[i][1]; j<opcodes[i][2]; j++ ) {
+				summary.push( [ 'equal', summary_a[j][1], summary_a[j][2] ] )
+			}
+		} else if( opcodes[i][0] === 'delete' ) {
+			for( j=opcodes[i][1]; j<opcodes[i][2]; j++ ) {
+				summary.push( [ 'delete', summary_a[j][1], summary_a[j][2] ] )
+			}
+		} else if( opcodes[i][0] === 'insert' ) {
+			for( j=opcodes[i][3]; j<opcodes[i][4]; j++ ) {
+				summary.push( [ 'insert', summary_b[j][1], summary_b[j][2] ] )
+			}
+		} else if( opcodes[i][0] === 'replace' ) {
+			let minij = opcodes[i][4] - opcodes[i][3] < opcodes[i][2] - opcodes[i][1] ? opcodes[i][4] - opcodes[i][3] : opcodes[i][2] - opcodes[i][1]
+			for( j=0; j<minij; j++ ) {
+				const titleA = summary_a[opcodes[i][1]+j][2],
+				      titleB = summary_b[opcodes[i][3]+j][2]
+				if( ( titleA.substring(0, 8) === 'Article ' && titleB.substring(0, 8) !== 'Article ' ) ||
+				    ( titleA.substring(0, 8) !== 'Article ' && titleB.substring(0, 8) === 'Article ' ) ) {
+					summary.push( [ 'delete', summary_a[j][1], summary_a[j][2] ] )
+					summary.push( [ 'insert', summary_b[j][1], summary_b[j][2] ] )
+				} else {
+					summary.push( [ 'replace', summary_a[opcodes[i][1]+j][1], summary_a[opcodes[i][1]+j][2],
+					                           summary_b[opcodes[i][3]+j][1], summary_b[opcodes[i][3]+j][2] ] )
+				}
+			}
+		}
+	}
+
 	const moved_articles = Object.values(articles_a).filter(s => s[1].size !== 0)
 
 	articles = Object.values(articles)
 	articles.sort(cmp_articles)
 
-	return { articles, moved_articles }
+	return { articles, moved_articles, summary }
 }
 
 function opcodes_from_matching_blocks( matching_blocks ) {

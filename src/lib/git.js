@@ -40,10 +40,10 @@ async function cat_file(repo, hash) {
 async function get_commit(repo, hash) {
 	const git = gitp(repo),
 	      log = await git.silent(true).raw(['log', '-1', '--pretty=%H %T %ai %s', hash]),
-	      r = /^([0-9a-f]+) ([0-9a-f]+) ([0-9]{4}-[0-9]{2}-[0-9]{2}) 00:00:00 \+0[12]00 (.*)$/.exec( log.trim() )
+	      r = /^([0-9a-f]+) ([0-9a-f]+) (?:[0-9]{4}-[0-9]{2}-[0-9]{2} 00:00:00 \+0[12]00)? (.*)$/.exec( log.trim() )
 	return {
 		hash: r[1],
-		date: dateFR2ISO8601(r[4]),
+		date: dateFR2ISO8601(r[3]),
 		tree: r[2],
 	}
 }
