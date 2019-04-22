@@ -76,4 +76,89 @@ function diff_articles(text_a, text_b) {
 	return { articles, moved_articles }
 }
 
-export { diff_articles }
+function opcodes_from_matching_blocks( matching_blocks ) {
+
+	let opcodes = [], i = 0, j = 0,
+	    tag, ai, bj, size, k
+
+	for( k=0; k<matching_blocks.length; k++ ) {
+		tag = ''
+		//[ ai, bj, size ] = matching_blocks[k]
+		ai = matching_blocks[k][0]
+		bj = matching_blocks[k][1]
+		size = matching_blocks[k][2]
+		if( i < ai && j < bj ) {
+			tag = 'replace'
+		} else if( i < ai ) {
+			tag = 'delete'
+		} else if( j < bj ) {
+			tag = 'insert'
+		}
+		if( tag ) {
+			opcodes.push( [ tag, i, ai, j, bj ] )
+		}
+		i = ai + size
+		j = bj + size
+		if( size ) {
+			opcodes.push( [ 'equal', ai, i, bj, j ] )
+		}
+	}
+
+	return opcodes
+}
+
+function keep_lcs_words(i, j, k, lcs, text_a, text_b, n, m) {
+
+	// LCS matching this condition are guaranteed to be kept. Possibly they will be shortened, except if it would result in removing them.
+	// This veto is in the following cases:
+	// - LCS containing a newline
+	// - LCS at the beginning or at the end of the text
+	let lcs_value = text_a.substring( lcs[0], lcs[0] + k ),
+	    veto_keep = ( lcs_value.indexOf('\n') !== -1 || i === 0 || j === 0 || i+k === n || j+k === m )
+
+	// Minimum length of the LCS, except if vetoed by the condition above
+	const minimum_length = 5
+
+	// If the LCS is too small, don’t consider it is a valuable LCS, except if vetoed
+	if( k <= minimum_length && ! veto_keep ) {
+		return { i, j, k, l: false }
+	}
+
+	let l0 = 0,
+	    k0 = k,
+	    lcs0 = lcs_value
+
+	const two_letters = /[a-záàâäéèêëíìîïóòôöøœúùûüýỳŷÿ0-9'’]{2}/i
+
+	// If the LCS starts in the middle of a word, remove these characters from the LCS
+	if( i > 0 && j > 0 ) {
+		let strA = text_a.substring( i - 1, i + k0 ),
+		    strB = text_b.substring( j - 1, j + k0 )
+		while( k0 && ( two_letters.test( strA.substring( l0, l0 + 2 ) ) || two_letters.test( strB.substring( l0, l0 + 2 ) ) ) ) {
+			k0--
+			l0++
+		}
+	}
+
+	// If the LCS ends in the middle of a word, remove these characters from the LCS
+	if( i + k < n && j + k < m ) {
+		let strA = text_a.substring( i, i + l0 + k0 + 1 ),
+		    strB = text_b.substring( j, j + l0 + k0 + 1 )
+		while( k0 && ( two_letters.test( strA.substring( l0 + k0 - 1, l0 + k0 + 1 ) ) || two_letters.test( strB.substring( l0 + k0 -1, l0 + k0 + 1 ) ) ) ) {
+			k0--
+		}
+	}
+
+	// If the LCS is too small, don’t consider it is a valuable LCS, except if vetoed
+	if( k0 <= minimum_length && ! veto_keep ) {
+		return { i, j, k, l: false }
+	}
+
+	i += l0
+	j += l0
+	k = k0
+
+	return { i, j, k, l: true }
+}
+
+export { diff_articles, opcodes_from_matching_blocks, keep_lcs_words }

@@ -1,7 +1,8 @@
-import DiffMatchPatch from 'diff-match-patch';
 import config from '../../../../../../../config'
 import git from '../../../../../../../lib/git'
-import { diff_articles } from '../../../../../../../lib/diff';
+import { diff_articles, opcodes_from_matching_blocks, keep_lcs_words } from '../../../../../../../lib/diff';
+import { lcs } from '../../../../../../../lib/lcs';
+import { ratcliff_obershelp } from '../../../../../../../lib/ratcliff_obershelp';
 
 function is404(res) {
 	return (res.writeHead(404, { 'Content-Type': 'application/json' }), res.end('null'))
@@ -47,38 +48,47 @@ export async function get(req, res) {
 
 	const tree = await git.cat_file(config.repo, rev.tree),
 	      blob_hash = /^100644 blob ([0-9a-f]+)/m.exec(tree)[1],
-	      blob = await git.cat_file(config.repo, blob_hash),
-	      rev_prev = await git.get_commit(config.repo, rev.hash+'~1'),
-	      tree_prev = await git.cat_file(config.repo, rev_prev.tree),
-	      blob_hash_prev = /^100644 blob ([0-9a-f]+)/m.exec(tree_prev)[1],
-	      blob_prev = await git.cat_file(config.repo, blob_hash_prev)
+	      blob = await git.cat_file(config.repo, blob_hash)
 
-	let dmp = new DiffMatchPatch()
+	let rev_prev, tree_prev, blob_hash_prev, blob_prev
+
+	try {
+		rev_prev = await git.get_commit(config.repo, rev.hash+'~1')
+		tree_prev = await git.cat_file(config.repo, rev_prev.tree)
+		blob_hash_prev = /^100644 blob ([0-9a-f]+)/m.exec(tree_prev)[1]
+		blob_prev = await git.cat_file(config.repo, blob_hash_prev)
+	} catch(error) {
+		rev_prev = {}
+		blob_prev = ''
+	}
 
 	let { articles, moved_articles } = diff_articles(blob_prev, blob)
 
 	let diffs = articles.filter(s => {
 		return s[0] !== 'equal'
 	}).map(s => {
-		let diffs_articles = dmp.diff_main(s[5], s[6])
-		dmp.diff_cleanupSemantic(diffs_articles)
-		let t = diffs_articles.map(u => {
-			if( u[0] === 0 ) {
-				return u[1]
-			} else if( u[0] === -1 ) {
-				return '<del>' + u[1].replace(/\n/g, '</del>\n<del>').replace(/<del><\/del>/g, '') + '</del>'
-			} else if( u[0] === 1 ) {
-				return '<ins>' + u[1].replace(/\n/g, '</ins>\n<ins>').replace(/<ins><\/ins>/g, '') + '</ins>'
+		let matching_blocks = ratcliff_obershelp( s[5], s[6], keep_lcs_words )
+		let opcodes = opcodes_from_matching_blocks( matching_blocks )
+		let t = opcodes.map(u => {
+			if( u[0] === 'equal' ) {
+				return s[5].substring(u[1], u[2])
+			} else if( u[0] === 'delete' ) {
+				return '<del>' + s[5].substring(u[1], u[2]).replace(/\n/g, '</del>\n<del>').replace(/<del><\/del>/g, '') + '</del>'
+			} else if( u[0] === 'insert' ) {
+				return '<ins>' + s[6].substring(u[3], u[4]).replace(/\n/g, '</ins>\n<ins>').replace(/<ins><\/ins>/g, '') + '</ins>'
+			} else if( u[0] === 'replace' ) {
+				return '<del>' + s[5].substring(u[1], u[2]).replace(/\n/g, '</del>\n<del>').replace(/<del><\/del>/g, '') + '</del>' +
+				       '<ins>' + s[6].substring(u[3], u[4]).replace(/\n/g, '</ins>\n<ins>').replace(/<ins><\/ins>/g, '') + '</ins>'
 			}
 		}).join('')
-		s.push('# Article ' + s[1] + '\n\n' + t)
+		s.push('# Article ' + ( s[1] || s[2] ) + '\n\n' + t)
 		return s
 	})
 
 	const result = {
-		date_prev: rev_prev.date,
-		condensat_prev: rev_prev.hash,
-		etat_prev: rev_prev.etat,
+		date_prev: rev_prev.date || null,
+		condensat_prev: rev_prev.hash || null,
+		etat_prev: rev_prev.etat || null,
 		date: rev.date,
 		condensat: rev.hash,
 		etat: rev.etat,
