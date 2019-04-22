@@ -16,12 +16,12 @@ function ratcliff_obershelp(text_a, text_b, keeplcs) {
 	while( queue.length > 0 ) {
 
 		[ alo, ahi, blo, bhi ] = queue.pop()
-		let { length: k, indexes } = lcs(text_a.substring(alo, ahi), text_b.substring(blo, bhi))
+		let { length: k, indexes } = lcs(text_a, text_b, alo, ahi, blo, bhi)
 		if( k === 0 ) {
 			continue
 		}
-		i = alo + indexes[0][0]
-		j = blo + indexes[0][1]
+		i = indexes[0][0]
+		j = indexes[0][1]
 		if( keeplcs ) {
 			let { i: i3, j: j3, k: k3, l } = keeplcs( i, j, k, indexes[0], text_a, text_b, n, m )
 			if( l === false || k3 <= 0 ) {
@@ -44,7 +44,14 @@ function ratcliff_obershelp(text_a, text_b, keeplcs) {
 		}
 	}
 
-	matching_blocks.sort()
+	matching_blocks.sort((a, b) => {
+		for( let i=0; i<4; i++ ) {
+			if( a[i] === b[i] ) {
+				continue
+			}
+			return a[i] < b[i] ? -1 : 1
+		}
+	})
 
 	i1 = 0, j1 = 0, k1 = 0
 	for( i=0; i<matching_blocks.length; i++ ) {
